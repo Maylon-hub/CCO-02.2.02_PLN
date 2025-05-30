@@ -1,0 +1,24 @@
+📁 CCO-02.2.02_PLN
+├── 📁 utils
+│   ├── utils.py
+├── 📁 data
+│   ├── Fact_checked_news.tsv
+│   ├── sample_trabalho1.tsv
+│   └── sample_trabalho1_tratada_manual.tsv
+├── 📁 notebooks
+│   └── analise_exploratoria_grafos.ipynb
+├── 📁 scripts
+│   ├── graph_analytics.py
+│   ├── evaluate_model.py
+│   └── preprocess.py
+├── 📁 results
+│   ├── 📁 graph_images
+│   │   └── graph_embedding_yake.png
+│   ├── 📁 graph_logs
+│   │   └── graph_gen_logs.txt
+│   └── 📁 generated_graphs
+│       └── graph_yake.pt
+│       └── graph_rem.pt
+├── 📄 README.md
+├── 📄 requirements.txt
+└── 📄 main.py
