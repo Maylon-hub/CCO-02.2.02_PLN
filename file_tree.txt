@@ -9,7 +9,7 @@
 │   └── analise_exploratoria_grafos.ipynb
 ├── 📁 scripts
 │   ├── graph_analytics.py
-│   ├── evaluate_model.py
+│   ├── evaluate_graphs.py
 │   └── preprocess.py
 ├── 📁 results
 │   ├── 📁 graph_images

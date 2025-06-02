@@ -26,9 +26,10 @@ def generate_sample(data, random_state = 42, nsample_true = 5, nsample_false = 5
 
     df.to_csv('dataset/sample_trabalho1.tsv', sep = '\t')
 
-def draw_graph_from_edge_index(edge_index, output_path):
+
+def draw_graph_from_edge_index(edge_index, output_path, classes, num_nodes):
     """
-    Desenha um grafo a partir de um edge_index e salva como imagem no caminho especificado.
+    Desenha um grafo a partir de um edge_index, incluindo vértices isolados, e salva como imagem.
 
     Parâmetros:
     -----------
@@ -37,23 +38,42 @@ def draw_graph_from_edge_index(edge_index, output_path):
 
     output_path : str
         Caminho do arquivo de saída para salvar a imagem do grafo (ex: "grafo.png").
+    
+    classes : list ou array
+        Lista ou array contendo a classe de cada nó (0 ou 1), usado para colorir os nós.
+    
+    num_nodes : int
+        Número total de nós no grafo, incluindo vértices isolados.
     """
     # Verificação básica
     if edge_index.shape[0] != 2:
         raise ValueError("edge_index deve ter o formato [2, num_edges].")
-
+    if len(classes) != num_nodes:
+        raise ValueError("O comprimento de 'classes' deve corresponder ao número de nós (num_nodes).")
+    
     # Criação do grafo
     G = nx.Graph()
-    edges = edge_index.t().tolist()  # lista de tuplas (i, j)
+    G.add_nodes_from(range(num_nodes))  # Inclui todos os vértices, até mesmo isolados
+    edges = edge_index.t().tolist()
     G.add_edges_from(edges)
+    
+    # Mapeamento de cores: 0 → azul, 1 → vermelho
+    color_map = ['blue' if c == -1 else 'red' for c in classes]
 
     # Desenho do grafo
     plt.figure(figsize=(8, 6))
-    pos = nx.spring_layout(G, seed=42)  # layout automático para visualização
-    nx.draw(G, pos, with_labels=True, node_color='skyblue', edge_color='gray', node_size=500, font_size=10)
+    pos = nx.spring_layout(G, seed=42)
+    nx.draw(
+        G, pos, with_labels=True, 
+        node_color=color_map, 
+        edge_color='gray', 
+        node_size=500, 
+        font_size=10,
+        alpha = 0.7
+    )
     plt.title("Grafo gerado a partir do edge_index")
     plt.axis('off')
-    
+
     # Salva a imagem
     plt.savefig(output_path, format='png')
     plt.close()

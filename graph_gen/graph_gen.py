@@ -11,9 +11,10 @@ from gensim.models import Word2Vec, Doc2Vec
 from gensim.models.doc2vec import TaggedDocument
 import spacy
 
-def REM_graph(df, text_column='news', threshold=1):
+def REM_graph(df, text_column='news', threshold=1, log_file='graph_connections.txt'):
     """
-    Gera um edge_index conectando textos que compartilham entidades nomeadas.
+    Gera um edge_index conectando textos que compartilham entidades nomeadas e salva um arquivo
+    de justificativa para cada aresta.
 
     Parâmetros:
     -----------
@@ -25,6 +26,9 @@ def REM_graph(df, text_column='news', threshold=1):
 
     threshold : int
         Número mínimo de entidades nomeadas em comum para criar uma aresta.
+
+    log_file : str
+        Nome do arquivo de saída com as justificativas.
 
     Retorna:
     --------
@@ -40,13 +44,20 @@ def REM_graph(df, text_column='news', threshold=1):
         entities = set(ent.text.strip().lower() for ent in doc.ents)
         entity_sets.append(entities)
 
-    # Constrói lista de arestas
-    edges = []
-    for i, j in combinations(range(len(entity_sets)), 2):
-        common_entities = entity_sets[i] & entity_sets[j]
-        if len(common_entities) >= threshold:
-            edges.append((i, j))
-            edges.append((j, i))  # Grafo não direcionado
+    # Inicializa o arquivo de justificativas
+    with open(log_file, 'w', encoding='utf-8') as f:
+        f.write("Justificativas de conexões no grafo:\n\n")
+
+        # Constrói lista de arestas e salva justificativas
+        edges = []
+        for i, j in combinations(range(len(entity_sets)), 2):
+            common_entities = entity_sets[i] & entity_sets[j]
+            if len(common_entities) >= threshold:
+                edges.append((i, j))
+                edges.append((j, i))  # Grafo não direcionado
+
+                # Salva justificativa
+                f.write(f"Conexão entre {i} e {j} - Entidades em comum: {', '.join(common_entities)}\n")
 
     if not edges:
         raise ValueError("Nenhuma conexão encontrada com o threshold especificado.")
@@ -54,9 +65,10 @@ def REM_graph(df, text_column='news', threshold=1):
     edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
     return edge_index
 
-def yake_graph(df, text_column):
+def yake_graph(df, text_column, log_file='yake_graph_connections.txt'):
     """
-    Gera uma estrutura de grafo entre textos com base na sobreposição de palavras-chave extraídas pelo YAKE.
+    Gera um grafo entre textos baseado em sobreposição de palavras-chave extraídas pelo YAKE e
+    salva um arquivo de justificativas.
 
     Parâmetros:
     -----------
@@ -66,70 +78,48 @@ def yake_graph(df, text_column):
     text_column : str
         Nome da coluna do DataFrame que contém os textos.
 
+    log_file : str
+        Nome do arquivo de saída para salvar as justificativas.
+
     Retorna:
     --------
     edge_index : torch.Tensor
-        Tensor de arestas no formato [2, num_edges], representando as conexões entre os textos
-        que compartilham palavras-chave relevantes segundo o método YAKE. O grafo é não direcionado.
-
-    Levanta:
-    --------
-    ValueError:
-        Caso nenhuma conexão entre os textos seja encontrada, ou seja, nenhuma interseção entre os conjuntos
-        de palavras-chave extraídas.
-
-    Descrição:
-    ----------
-    A função constrói um grafo em que cada nó representa um texto e uma aresta é criada entre dois nós
-    se os respectivos textos compartilharem ao menos uma palavra-chave extraída automaticamente com o algoritmo YAKE.
-
-    - As palavras-chave são extraídas individualmente de cada texto, considerando bigramas e trigramas (2 ≤ n ≤ 3),
-      e mantendo apenas as `top_k` mais relevantes (por padrão, 5).
-    - Apenas palavras-chave dentro do intervalo de n-gramas especificado são mantidas.
-    - Se dois textos compartilham pelo menos uma palavra-chave, é criada uma aresta entre eles.
-    - O resultado é retornado como `edge_index`, um tensor `torch.Tensor` compatível com bibliotecas de grafos
-      como o PyTorch Geometric.
-
-    Exemplo de uso:
-    ---------------
-    >>> import pandas as pd
-    >>> df = pd.DataFrame({'texto': ['A floresta tropical está em perigo.',
-                                     'Mudanças climáticas afetam a biodiversidade.',
-                                     'A floresta é essencial para o planeta.']})
-    >>> edge_index = yake_graph(df, 'texto')
-    >>> print(edge_index)
-    tensor([[0, 2, 2, 0],
-            [2, 0, 0, 2]])
+        Tensor [2, num_edges] com as conexões entre os textos baseadas em palavras-chave relevantes.
     """
     def extract_keywords(text, ngram_range=(1, 3), top_k=15):
-        # Extrai n-gramas entre unigramas e trigramas
+        # Extrai n-gramas (até trigramas)
         custom_kw_extractor = yake.KeywordExtractor(
-            lan="pt",  # ou "en" se os textos forem em inglês
-            n=ngram_range[1],  # extrai até trigramas
+            lan="pt",
+            n=ngram_range[1],
             top=top_k,
             features=None
         )
         keywords = custom_kw_extractor.extract_keywords(text)
-        # Filtra por tamanho de n-grama desejado (1 a 3)
+        # Filtra apenas n-gramas desejados (1 a 3 palavras)
         selected = [kw for kw, score in keywords if len(kw.split()) in range(ngram_range[0], ngram_range[1]+1)]
         return set(selected)
-    
-    # Passo 1: extrair n-gramas relevantes de cada texto
+
+    # Passo 1: extrair n-gramas relevantes
     keyword_sets = df[text_column].apply(lambda txt: extract_keywords(txt)).tolist()
-    
-    # Passo 2: comparar cada par de textos
-    edges = []
-    for i, j in combinations(range(len(keyword_sets)), 2):
-        if keyword_sets[i] & keyword_sets[j]:  # interseção não vazia
-            edges.append((i, j))
-            edges.append((j, i))  # grafo não direcionado (duplicar
+
+    # Inicializa o arquivo de justificativas
+    with open(log_file, 'w', encoding='utf-8') as f:
+        f.write("Justificativas de conexões no grafo (baseadas em palavras-chave YAKE):\n\n")
+
+        # Passo 2: comparar cada par e gerar justificativas
+        edges = []
+        for i, j in combinations(range(len(keyword_sets)), 2):
+            common_keywords = keyword_sets[i] & keyword_sets[j]
+            if common_keywords:  # interseção não vazia
+                edges.append((i, j))
+                edges.append((j, i))  # grafo não direcionado
+                f.write(f"Conexão entre {i} e {j} - Palavras-chave em comum: {', '.join(common_keywords)}\n")
 
     if not edges:
         raise ValueError("Nenhuma conexão entre os textos encontrada com os critérios definidos.")
-    
-    # Passo 3: transformar em edge_index (formato [2, num_edges])
+
+    # Passo 3: transformar em edge_index
     edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
-    
     return edge_index
 
 def embedding_sim_graphs(df, text_column, embedding='word2vec', similarity='cosine', k_neighbors=3):
