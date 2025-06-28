@@ -8,6 +8,11 @@ def get_args():
 
     parser.add_argument('--gen_samples', action='store_true', help='Chama a função de geração de amostras')
     parser.add_argument('--gen_samples_random_state', type=int, default=42, help='random_state da geração de amostra')
+    parser.add_argument('--evaluate_sample', action = 'store_true', help = 'Avalia a sample gerada por --gen_sample')
+
+    parser.add_argument('--benchmark', action='store_true', help = 'Chama a função principal para executar o benchmark')
+    parser.add_argument('--benchmark_dataset_path', type=str, help = 'Caminho do dataset para fazer o benchmark principal')
+    parser.add_argument('--embedding_path', type=str, help = 'caminho dos embeddings, se não tiver, faz embeddings com Doc2Vec')
 
     args = parser.parse_args()
     return args
@@ -55,6 +60,7 @@ def draw_graph_from_edge_index(edge_index, output_path, classes, num_nodes):
     G = nx.Graph()
     G.add_nodes_from(range(num_nodes))  # Inclui todos os vértices, até mesmo isolados
     edges = edge_index.t().tolist()
+    G.to_undirected()
     G.add_edges_from(edges)
     
     # Mapeamento de cores: 0 → azul, 1 → vermelho
@@ -62,14 +68,14 @@ def draw_graph_from_edge_index(edge_index, output_path, classes, num_nodes):
 
     # Desenho do grafo
     plt.figure(figsize=(8, 6))
-    pos = nx.spring_layout(G, seed=42)
+    pos = nx.kamada_kawai_layout(G)
     nx.draw(
         G, pos, with_labels=True, 
         node_color=color_map, 
         edge_color='gray', 
-        node_size=500, 
-        font_size=10,
-        alpha = 0.7
+        node_size=700, 
+        font_size=20,
+        # alpha = 0.7
     )
     plt.title("Grafo gerado a partir do edge_index")
     plt.axis('off')

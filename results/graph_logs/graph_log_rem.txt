@@ -2,13 +2,13 @@ Justificativas de conexões no grafo:
 
 Conexão entre 0 e 2 - Entidades em comum: mercosul
 Conexão entre 0 e 6 - Entidades em comum: fato, fake
-Conexão entre 1 e 2 - Entidades em comum: aos fatos, bolsonaro, pt, lula, facebook, boatos.org, falso
-Conexão entre 1 e 3 - Entidades em comum: facebook, aos fatos, pt, falso
-Conexão entre 1 e 4 - Entidades em comum: aos fatos, fatos, facebook, twitter, falso
-Conexão entre 1 e 8 - Entidades em comum: jair bolsonaro, bolsonaro
-Conexão entre 2 e 3 - Entidades em comum: aos fatos, pt, facebook, lupa, falso
+Conexão entre 1 e 2 - Entidades em comum: pt, falso, bolsonaro, lula, facebook, boatos.org, aos fatos
+Conexão entre 1 e 3 - Entidades em comum: pt, facebook, aos fatos, falso
+Conexão entre 1 e 4 - Entidades em comum: falso, facebook, twitter, fatos, aos fatos
+Conexão entre 1 e 8 - Entidades em comum: bolsonaro, jair bolsonaro
+Conexão entre 2 e 3 - Entidades em comum: pt, falso, facebook, lupa, aos fatos
 Conexão entre 2 e 4 - Entidades em comum: facebook, aos fatos, falso
-Conexão entre 2 e 8 - Entidades em comum: venezuela, bolsonaro
+Conexão entre 2 e 8 - Entidades em comum: bolsonaro, venezuela
 Conexão entre 3 e 4 - Entidades em comum: facebook, aos fatos, falso
 Conexão entre 4 e 8 - Entidades em comum: rússia
 Conexão entre 5 e 8 - Entidades em comum: brasília

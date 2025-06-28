@@ -120,9 +120,10 @@ def yake_graph(df, text_column, log_file='yake_graph_connections.txt'):
 
     # Passo 3: transformar em edge_index
     edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
-    return edge_index
+    return edge_index   
 
 def embedding_sim_graphs(df, text_column, embedding='word2vec', similarity='cosine', k_neighbors=3):
+    # TODO: fazer um embedding usando bert
     """
     Gera um grafo a partir de embeddings dos textos com base em k vizinhos mais próximos.
 
@@ -198,4 +199,4 @@ def embedding_sim_graphs(df, text_column, embedding='word2vec', similarity='cosi
         raise ValueError("Nenhuma conexão encontrada com os k vizinhos especificados.")
 
     edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
-    return edge_index
+    return edge_index, vectors

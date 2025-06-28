@@ -2,7 +2,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import os
 
-def evaluate_graph(edge_index, metric='density', plot_path='degree_distribution.png'):
+def evaluate_graph(edge_index, num_nodes, classes, metric='density', plot_path='degree_distribution.png'):
     """
     Avalia métricas de um grafo a partir do edge_index.
 
@@ -24,12 +24,16 @@ def evaluate_graph(edge_index, metric='density', plot_path='degree_distribution.
     """
     # Constrói o grafo
     G = nx.Graph()
+    G.add_nodes_from(range(num_nodes))
     edges = list(zip(edge_index[0].tolist(), edge_index[1].tolist()))
     G.add_edges_from(edges)
 
+    for idx, c in enumerate(classes):
+        G.nodes[idx]['classe'] = c
+
     if metric == 'assortativity':
         # Assortatividade por grau
-        value = nx.degree_assortativity_coefficient(G)
+        value = nx.degree_assortativity_coefficient(G, 'classe')
         return value
 
     elif metric == 'density':
@@ -55,7 +59,7 @@ def evaluate_graph(edge_index, metric='density', plot_path='degree_distribution.
         plt.hist(degrees, bins=range(1, max(degrees)+2), align='left', edgecolor='black')
         plt.xlabel("Grau do nó")
         plt.ylabel("Número de nós")
-        plt.title("Distribuição de Grau dos Nós")
+        # plt.title("Distribuição de Grau dos Nós")
         plt.grid(axis='y', linestyle='--', alpha=0.7)
         plt.tight_layout()
 

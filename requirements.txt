@@ -6,5 +6,4 @@ scikit-learn
 gensim
 networkx
 matplotlib
-allennlp
-allennlp-models
+torch_geometric

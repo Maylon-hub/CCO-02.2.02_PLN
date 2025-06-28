@@ -1,4 +1,8 @@
 from utils.utils import *
+from utils.graph_eval import evaluate_graph
+from graph_gen.graph_gen import *
+from torch_geometric.data import Data
+
 
 import logging
 logging.basicConfig(
@@ -13,3 +17,61 @@ if args.gen_samples:
     generate_sample(data = data, random_state=args.gen_samples_random_state)
 
     logging.info("Amostra gerada no caminho dataset/sample_trabalho1.tsv")
+
+if args.evaluate_sample:
+    df = pd.read_csv('dataset/sample_trabalho1_tratada_manual.tsv', sep = '\t')
+    classes = df['label']
+    num_nodes = df.shape[0]
+
+
+    # embedding doc2vec euclidean
+    edge_index = embedding_sim_graphs(df, 'news', 'doc2vec', similarity='euclidean')
+
+    draw_graph_from_edge_index(edge_index=edge_index, output_path = 'results/graph_images/graph_embedding_sim_graph_doc2vec_cosine.png', classes = df['label'], num_nodes=df.shape[0])
+
+    print('MÉTRICAS DO GRAFO DOC2VEC POR SIMILARIDADE EUCLIDIANA')
+    print('density ', evaluate_graph(edge_index = edge_index, num_nodes=num_nodes, classes=classes, metric = 'density'))
+    print('assortativity', evaluate_graph(edge_index = edge_index, num_nodes=num_nodes, classes=classes, metric = 'assortativity'))
+    print('number of edges', len(edge_index[0]) / 2)
+    evaluate_graph(edge_index = edge_index, num_nodes=num_nodes, classes=classes, metric = 'node_degree', plot_path='results/graph_distribution/ndd_sim_doc2vec_euclid.png')
+
+
+    # REM
+    edge_index  = REM_graph(df, 'news', log_file='results/graph_logs/graph_log_rem.txt')
+
+    draw_graph_from_edge_index(edge_index=edge_index, output_path = 'results/graph_images/graph_REM.png', classes = df['label'], num_nodes=df.shape[0])
+
+    print('MÉTRICAS DO GRAFO REN')
+    print('density ', evaluate_graph(edge_index = edge_index, num_nodes=num_nodes, classes=classes, metric = 'density'))
+    print('assortativity', evaluate_graph(edge_index = edge_index, num_nodes=num_nodes, classes=classes, metric = 'assortativity'))
+    print('number of edges', len(edge_index[0]) / 2)
+    evaluate_graph(edge_index = edge_index, num_nodes=num_nodes, classes=classes, metric = 'node_degree', plot_path='results/graph_distribution/ndd_rem.png')
+
+    # Yake (não deu muito certo com essa sample)
+    edge_index = yake_graph(df, 'news', log_file='results/graph_logs/graph_log_yake.txt')
+    draw_graph_from_edge_index(edge_index=edge_index, output_path = 'results/graph_images/graph_yake.png', classes = df['label'], num_nodes=df.shape[0])
+
+    print('MÉTRICAS DO GRAFO YAKE')
+    print('density ', evaluate_graph(edge_index = edge_index, num_nodes=num_nodes, classes=classes, metric = 'density'))
+    print('assortativity', evaluate_graph(edge_index = edge_index, num_nodes=num_nodes, classes=classes, metric = 'assortativity'))
+    print('number of edges', len(edge_index[0]) / 2)
+    evaluate_graph(edge_index = edge_index, num_nodes=num_nodes, classes=classes, metric = 'node_degree', plot_path='results/graph_distribution/ndd_yake.png')
+
+    #TODO: Colocar o args.benchmark para executar a tarefa completa em args.dataset_path
+
+if args.benchmark:
+    df = pd.read_csv(args.benchmark_dataset_path, sep = '\t')
+
+    sim_edge_index, x = embedding_sim_graphs(df, 'news')
+    sim_graph_data = Data(x = x, edge_index = sim_edge_index, y = torch.tensor(df['label']))
+    print(sim_graph_data)
+    
+    # yake_edge_index = yake_graph(df, 'news')
+    # yake_graph_data = Data(x = x, edge_index = yake_edge_index, y = torch.tensor(df['label']))
+    # print(yake_graph_data)
+
+    rem_edge_index = REM_graph(df, 'news', threshold = 5)
+    rem_graph_data = Data(x = x, edge_index = rem_edge_index, y = torch.tensor(df['label']))
+    print(rem_graph_data)
+
+    # Etapa do treinamento
