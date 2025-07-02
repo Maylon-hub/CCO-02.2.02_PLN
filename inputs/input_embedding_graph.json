@@ -1,0 +1,4 @@
+{
+    "benchmark_dataset_path" : "dataset/Fact_checked_news.tsv",
+    "graph_generator" : "embedding"
+}

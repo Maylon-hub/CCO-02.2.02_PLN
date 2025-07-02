@@ -2,6 +2,10 @@ from utils.utils import *
 from utils.graph_eval import evaluate_graph
 from graph_gen.graph_gen import *
 from torch_geometric.data import Data
+from torch_geometric.nn import GAE
+from models.gcn_model import GCN
+from torch_geometric.transforms import RemoveDuplicatedEdges
+
 
 
 import logging
@@ -11,6 +15,11 @@ logging.basicConfig(
 )
 
 args = get_args()
+if args.config:
+    config_params = load_config_from_json(args.config)
+    # Atualiza os parâmetros do argparse com os valores do JSON
+    for key, value in config_params.items():
+        setattr(args, key, value)
 
 if args.gen_samples:
     data = pd.read_csv('dataset/Fact_checked_news.tsv', sep = '\t')
@@ -60,18 +69,50 @@ if args.evaluate_sample:
     #TODO: Colocar o args.benchmark para executar a tarefa completa em args.dataset_path
 
 if args.benchmark:
+
+    # Fazer o input por json
+
     df = pd.read_csv(args.benchmark_dataset_path, sep = '\t')
 
-    sim_edge_index, x = embedding_sim_graphs(df, 'news')
-    sim_graph_data = Data(x = x, edge_index = sim_edge_index, y = torch.tensor(df['label']))
-    print(sim_graph_data)
+    x = feature_gen(df, 'news')
+
+    if args.graph_generator == 'yake':
+        edge_index = yake_graph(df, 'news')
+    if args.graph_generator == 'ren':
+        edge_index = REM_graph(df, 'news')
+    if args.graph_generator == 'embedding':
+        if args.embedding_graph_mode == 'word2vec':
+            edge_index = embedding_sim_graphs(df = df, text_column= 'news', embedding='word2vec')
+        if args.embedding_graph_mode == 'doc2vec':
+            edge_index = embedding_sim_graphs(df = df, text_column= 'news', embedding='doc2vec')
+    if args.graph_generator == 'none':
+        edge_index = None
+
+    graph_data = Data(x = x, edge_index = edge_index, y = torch.tensor(df['label']))
+
+    # Removendo edges duplicados
+    if graph_data.edge_index != None:
+        transform = RemoveDuplicatedEdges()
+        graph_data = transform(graph_data)
+
+    print(graph_data)
+    # print(has_duplicate_edges(graph_data.edge_index))
+
+    # Momento de treinamento do modelo.
+
+    # Aplicando um GAE se possível
+
+    if graph_data.edge_index != None:
+        encoder = GCN(in_channels = graph_data.x.shape[1], hidden_channels = 32, out_channels = 16)
+        model = GAE(encoder = encoder)
+        # TODO: colocar a learning rate (lr) e as epocas como parâmetros no args
+        optimizer = torch.optim.Adam(params=model.parameters(), lr = 0.001)
+        epochs = 100 
+        train_gae(data = graph_data, gae_model = model, optimizer = optimizer, epochs = epochs)
+
+        graph_data.x = model.encode(x, edge_index)
+
+    train_and_evaluate_svm(graph_data.x, graph_data.y)
+
     
-    # yake_edge_index = yake_graph(df, 'news')
-    # yake_graph_data = Data(x = x, edge_index = yake_edge_index, y = torch.tensor(df['label']))
-    # print(yake_graph_data)
 
-    rem_edge_index = REM_graph(df, 'news', threshold = 5)
-    rem_graph_data = Data(x = x, edge_index = rem_edge_index, y = torch.tensor(df['label']))
-    print(rem_graph_data)
-
-    # Etapa do treinamento

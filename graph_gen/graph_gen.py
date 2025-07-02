@@ -86,7 +86,7 @@ def yake_graph(df, text_column, log_file='yake_graph_connections.txt'):
     edge_index : torch.Tensor
         Tensor [2, num_edges] com as conexões entre os textos baseadas em palavras-chave relevantes.
     """
-    def extract_keywords(text, ngram_range=(1, 3), top_k=15):
+    def extract_keywords(text, ngram_range=(2,3), top_k=5):
         # Extrai n-gramas (até trigramas)
         custom_kw_extractor = yake.KeywordExtractor(
             lan="pt",
@@ -120,7 +120,7 @@ def yake_graph(df, text_column, log_file='yake_graph_connections.txt'):
 
     # Passo 3: transformar em edge_index
     edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
-    return edge_index   
+    return edge_index
 
 def embedding_sim_graphs(df, text_column, embedding='word2vec', similarity='cosine', k_neighbors=3):
     # TODO: fazer um embedding usando bert
@@ -199,4 +199,19 @@ def embedding_sim_graphs(df, text_column, embedding='word2vec', similarity='cosi
         raise ValueError("Nenhuma conexão encontrada com os k vizinhos especificados.")
 
     edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
-    return edge_index, vectors
+    return edge_index
+
+def feature_gen(df, text_column, embedding='word2vec'):
+    texts = df[text_column].astype(str).tolist()
+
+    # Geração dos embeddings
+    if embedding == 'word2vec':
+        tokenized = [text.split() for text in texts]
+        w2v_model = Word2Vec(sentences=tokenized, vector_size=100, window=5, min_count=1, workers=4)
+        vectors = np.array([
+            np.mean([w2v_model.wv[word] for word in words if word in w2v_model.wv], axis=0)
+            if any(word in w2v_model.wv for word in words) else np.zeros(w2v_model.vector_size)
+            for words in tokenized
+        ])
+
+    return torch.tensor(vectors)
