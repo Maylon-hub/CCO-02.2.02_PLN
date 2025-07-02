@@ -6,8 +6,6 @@ from torch_geometric.nn import GAE
 from models.gcn_model import GCN
 from torch_geometric.transforms import RemoveDuplicatedEdges
 
-
-
 import logging
 logging.basicConfig(
     level=logging.INFO,  # Pode ser DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -73,6 +71,11 @@ if args.benchmark:
     # Fazer o input por json
 
     df = pd.read_csv(args.benchmark_dataset_path, sep = '\t')
+
+    palavras_a_remover = carregar_palavras_remocao(args.correlated_words_txt_path)
+
+    # Remover as palavras altamente correlacionadas
+    df = remover_palavras_de_textos(df, 'news', palavras_a_remover)
 
     x = feature_gen(df, 'news')
 

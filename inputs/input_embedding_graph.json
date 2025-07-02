@@ -1,4 +1,4 @@
 {
-    "benchmark_dataset_path" : "dataset/Fact_checked_news.tsv",
+    "benchmark_dataset_path" : "dataset/llm_processed_data.tsv",
     "graph_generator" : "embedding"
 }

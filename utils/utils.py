@@ -7,6 +7,9 @@ import torch
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
+import re
+from sklearn.feature_extraction.text import CountVectorizer
+import numpy as np
 
 def get_args():
     parser = argparse.ArgumentParser(description="Descrição do seu programa.")
@@ -24,6 +27,9 @@ def get_args():
 
     parser.add_argument('--benchmark_dataset_path', type=str, help = 'Caminho do dataset (csv) para fazer o benchmark principal')
     parser.add_argument('--embedding_path', type=str, help = 'caminho dos embeddings, se não tiver, faz embeddings com Doc2Vec')
+
+    # Remoção de palavras altamente correlacionadas
+    parser.add_argument('--correlated_words_txt_path', type = str, default = 'removal_words.txt', help = 'Caminho para o documento com as palavras altamente correlacionadas')
 
     
 
@@ -172,3 +178,72 @@ def train_and_evaluate_svm(x: torch.Tensor, y: torch.Tensor, test_size=0.5, rand
 
     f1 = f1_score(y_test, y_pred, average='weighted')
     print(f"\nF1 Score (ponderado): {f1:.4f}")
+
+def carregar_palavras_remocao(caminho_txt):
+    """
+    Lê um arquivo .txt e retorna uma lista de palavras (inclusive com '#'),
+    sem remover nada como comentário e ignora linhas em branco.
+    """
+    with open(caminho_txt, 'r', encoding='utf-8') as f:
+        palavras = [linha.strip().lower() for linha in f if linha.strip()]
+    return palavras
+
+def remover_palavras_de_textos(df, coluna_texto, palavras_remover):
+    """
+    Remove palavras específicas (case-insensitive) de uma coluna de textos de um DataFrame.
+
+    Parâmetros:
+    - df: DataFrame com os textos
+    - coluna_texto: Nome da coluna que contém os textos
+    - palavras_remover: Lista de palavras a remover (em minúsculas)
+    """
+    # Compila uma regex para remover as palavras completas (caso-insensitive)
+    padrao = r'\b(' + '|'.join(re.escape(palavra) for palavra in palavras_remover) + r')\b'
+    regex = re.compile(padrao, flags=re.IGNORECASE)
+
+    def limpar_texto(texto):
+        texto_limpo = regex.sub('', texto)         # remove palavras
+        texto_limpo = re.sub(r'\s+', ' ', texto_limpo)  # remove espaços duplos
+        return texto_limpo.strip()
+
+    df[coluna_texto] = df[coluna_texto].astype(str).apply(limpar_texto)
+    return df
+
+def correlacao_de_classes(df, column='news', label_column='classe', num_of_words_to_return=20, classe=1):
+    """
+    Retorna as palavras mais correlacionadas com uma classe específica.
+
+    Parâmetros:
+    - df: DataFrame com os dados
+    - column: nome da coluna de texto
+    - label_column: nome da coluna de rótulos
+    - num_of_words_to_return: número de palavras a retornar
+    - classe: valor da classe de interesse (ex: 1)
+
+    Retorna:
+    - Lista de tuplas (palavra, score), ordenada pelo score decrescente
+    """
+
+    # Vetorização simples (bag-of-words)
+    vectorizer = CountVectorizer(lowercase=True, stop_words='english', binary=True)
+    X = vectorizer.fit_transform(df[column])
+    palavras = np.array(vectorizer.get_feature_names_out())
+
+    # Separação por classe
+    y = df[label_column].values
+    X_classe = X[y == classe]
+    X_outras = X[y != classe]
+
+    # Cálculo de frequência relativa
+    freq_classe = np.asarray(X_classe.sum(axis=0)).flatten() / X_classe.shape[0]
+    freq_outras = np.asarray(X_outras.sum(axis=0)).flatten() / max(X_outras.shape[0], 1)
+
+    # Score de associação (diferença normalizada)
+    score = freq_classe - freq_outras
+
+    # Seleciona as top palavras com maior correlação positiva
+    top_indices = np.argsort(score)[::-1][:num_of_words_to_return]
+    top_palavras = palavras[top_indices]
+    top_scores = score[top_indices]
+
+    return list(zip(top_palavras, top_scores))
